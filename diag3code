@@ -1,0 +1,105 @@
+@startuml
+skinparam actorStyle awesome
+left to right direction
+
+header Маркетплейс "Wildberries Беларусь"
+title Диаграмма прецедентов (Use Case Diagram)
+
+' --- АКЛЮЧИТЕЛЬНЫЕ АКТОРЫ И ОБОБЩЕНИЯ ---
+actor "Пользователь системы" as User
+
+actor "Покупатель" as Buyer
+actor "Продавец" as Seller
+actor "Курьер" as Courier
+actor "Администратор" as Admin
+
+' Отношения обобщения (Generalization)
+User <|-- Buyer
+User <|-- Seller
+User <|-- Courier
+User <|-- Admin
+
+' Внешние системы
+actor "Система ЕРИП / Банк РБ" as EripSystem <<Application>>
+actor "Логистическая система Белпочты" as BelpochtaSystem <<Application>>
+
+' --- СИСТЕМА ---
+rectangle "Платформа Wildberries.by" {
+    
+    ' Общий функционал (User)
+    usecase "Авторизоваться в системе" as UC_Auth
+    
+    ' Функционал Покупателя
+    usecase "Поиск и фильтрация товаров" as UC_Search
+    usecase "Фильтрация по белорусским поставщикам" as UC_FilterBY
+    usecase "Оформить заказ" as UC_Checkout
+    usecase "Выбрать способ доставки" as UC_Delivery
+    usecase "Доставка в ПВЗ Wildberries" as UC_DelWB
+    usecase "Доставка через Белпочту" as UC_DelBelpost
+    usecase "Оплатить заказ" as UC_Pay
+    usecase "Оплата картой банка РБ" as UC_PayCard
+    usecase "Оплата через систему ЕРИП" as UC_PayErip
+    
+    ' Функционал Продавца
+    usecase "Управление каталогом товаров" as UC_ManageGoods
+    usecase "Регистрация юр. лица в РБ" as UC_RegisterLegal
+    usecase "Просмотр аналитики продаж" as UC_Analytics
+    
+    ' Функционал Курьера
+    usecase "Управление статусом доставки" as UC_DeliveryStatus
+    usecase "Формирование маршрутного листа" as UC_Route
+    
+    ' Функционал Администратора
+    usecase "Модерация карточек товаров" as UC_Moderate
+    usecase "Разрешение споров и рекламаций" as UC_Support
+    usecase "Управление тарифами и комиссиями" as UC_Tariffs
+}
+
+' --- СВЯЗИ МЕЖДУ АКТОРНЫМИ И ПРЕЦЕДЕНТАМИ ---
+
+' Связи общего пользователя
+User --> UC_Auth
+
+' Связи покупателя
+Buyer --> UC_Search
+Buyer --> UC_Checkout
+
+' Связи продавца
+Seller --> UC_ManageGoods
+Seller --> UC_Analytics
+
+' Связи курьера
+Courier --> UC_DeliveryStatus
+Courier --> UC_Route
+
+' Связи администратора
+Admin --> UC_Moderate
+Admin --> UC_Support
+Admin --> UC_Tariffs
+
+' --- ОТНОШЕНИЯ МЕЖДУ ПРЕЦЕДЕНТАМИ (Include / Extend) ---
+
+' Специфика поиска (Фильтрация по РБ поставщикам расширяет обычный поиск)
+UC_FilterBY .> UC_Search : <<extend>>
+
+' Оформление заказа включает выбор доставки и оплату
+UC_Checkout ..> UC_Delivery : <<include>>
+UC_Checkout ..> UC_Pay : <<include>>
+
+' Варианты доставки (Обобщение прецедентов доставки)
+UC_Delivery <|-- UC_DelWB
+UC_Delivery <|-- UC_DelBelpost
+
+' Варианты оплаты (Обобщение прецедентов оплаты)
+UC_Pay <|-- UC_PayCard
+UC_Pay <|-- UC_PayErip
+
+' Связь продавца с регистрацией бизнеса в РБ
+UC_ManageGoods ..> UC_RegisterLegal : <<include>>
+
+' --- ВЗАИМОДЕЙСТВИЕ С ВНЕШНИМИ СИСТЕМАМИ ---
+UC_DelBelpost --> BelpochtaSystem : "Передача данных отправления"
+UC_PayCard --> EripSystem : "Процессинг карты (Белкарт/Visa/MC)"
+UC_PayErip --> EripSystem : "Выставление счета в ЕРИП"
+
+@endum
