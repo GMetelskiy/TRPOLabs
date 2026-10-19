@@ -1,0 +1,31 @@
+@startuml
+' Определение акторов системы
+actor User
+actor Bot
+actor Admin
+
+' Границы системы Telegram
+rectangle "Telegram System" {
+    ' Ассоциации пользователя с основными функциями
+    User -- (Send Message)
+    User -- (Join Group)
+    User -- (Make Call)
+    User -- (Share Media)
+
+    ' Отношения включения между use case
+    (Send Message) -- (Receive Message)
+    (Join Group) -- (Create Group)
+    (Make Call) -- (Answer Call)
+    (Share Media) -- (Download Media)
+    (Share Media) -- (Upload Media)
+
+    ' Функции администратора
+    Admin -- (Manage Users)
+    Admin -- (Moderate Content)
+    Admin -- (Configure Bot)
+}
+
+' Внешние взаимодействия бота
+Bot -- (Respond to Commands)
+Bot -- (Send Notifications)
+@enduml
