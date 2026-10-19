@@ -1,0 +1,25 @@
+@startuml
+actor User
+actor Admin
+actor Bot
+
+rectangle "Telegram System" {
+    ' Ассоциация - связь актора с use case
+    User -- (Send Message) : ассоциация
+    
+    ' Обобщение - наследование поведения
+    Admin ..> (Manage Users) : generalization
+    
+    ' Включение - обязательная связь
+    (Send Message) ..> (Receive Message) : include
+    
+    ' Расширение - опциональная связь
+    (Share Media) ..|> (Upload Media) : extend
+    
+    ' Еще одна ассоциация
+    Bot -- (Respond to Commands) : association
+    
+    ' Включение между use case
+    (Respond to Commands) -- (Send Notifications) : include
+}
+@enduml
