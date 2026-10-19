@@ -1,0 +1,65 @@
+@startuml
+autonumber
+skinparam BoxPadding 15
+skinparam ParticipantPadding 10
+
+actor "Покупатель" as Buyer
+participant "Мобильное приложение WB" as AppWB
+participant "Сервер Wildberries" as ServerWB
+participant "Терминал Белпочты (ПВЗ)" as Terminal
+participant "Система Белпочты" as SystemPost
+
+== Этап 1: Получение одноразового кода (в приложении) ==
+Buyer -> AppWB : Открывает карточку доставки
+Activate AppWB
+AppWB -> ServerWB : Запрос актуального кода выдачи
+Activate ServerWB
+ServerWB --> AppWB : Одноразовый код / QR-код (действует ограниченное время)
+Deactivate ServerWB
+AppWB --> Buyer : Отображение QR-кода / Цифрового кода на экране
+Deactivate AppWB
+
+== Этап 2: Идентификация на пункте выдачи ==
+Buyer -> Terminal : Сканирует QR-код (или вводит номер заказа/код вручную)
+Activate Terminal
+
+Terminal -> SystemPost : Проверить заказ (Код выдачи / Номер заказа)
+Activate SystemPost
+
+SystemPost -> ServerWB : Запрос статуса и верификация кода (ID заказа, Код)
+Activate ServerWB
+ServerWB --> SystemPost : Результат верификации кода и статус оплаты
+Deactivate ServerWB
+
+== Этап 3: Разветвление сценариев ==
+
+alt #LightGreen Успешный сценарий: Код верный, заказ готов к выдаче
+    SystemPost --> Terminal : Успешно: Заказ найден, оплачен, готов к выдаче
+    Terminal --> Terminal : Подача сигнала сотруднику (Вывести на экран ПВЗ: "Выдать посылку [Ячейка X]")
+    Terminal --> Buyer : Сообщение: "Запрос принят. Ожидайте выдачи сотрудником."
+    
+    ... Сотрудник Белпочты передает посылку Покупателю ...
+    
+    Terminal -> SystemPost : Фиксация факта выдачи сотрудником
+    SystemPost -> ServerWB : POST /api/v1/orders/status (Статус: "Получен")
+    Activate ServerWB
+    ServerWB --> SystemPost : HTTP 200 OK
+    Deactivate ServerWB
+    SystemPost --> Terminal : Успешное закрытие операции
+    Terminal --> Buyer : Печать чека / Электронное извещение
+    
+else #LightPink Альтернативный сценарий А: Неверный/истекший код выдачи
+    SystemPost --> Terminal : Ошибка: Код недействителен (истек таймаут или не совпадает)
+    Terminal --> Buyer : Сообщение: "Неверный код доступа. Обновите страницу в приложении WB."
+
+else #LightCyan Альтернативный сценарий Б: Заказ уже получен
+    SystemPost --> Terminal : Ошибка: Заказ имеет статус "Выдан"
+    Terminal --> Buyer : Сообщение: "Данный заказ уже был получен ранее."
+
+else #LightYellow Альтернативный сценарий В: Заказ отсутствует в системе
+    SystemPost --> Terminal : Ошибка: Заказ не найден (не поступил в это отделение)
+    Terminal --> Buyer : Сообщение: "Заказ не найден в данном отделении Белпочты."
+    Deactivate SystemPost
+    Deactivate Terminal
+end
+@enduml

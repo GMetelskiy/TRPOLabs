@@ -1,0 +1,62 @@
+@startuml
+autonumber
+skinparam BoxPadding 10
+skinparam ParticipantPadding 10
+
+actor "Покупатель" as Buyer
+participant "Фронтенд-приложение" as Frontend
+participant "Бэкенд-сервис заказов" as OrderService
+participant "Складская система" as WMS
+participant "Сервис платежей" as PaymentService
+
+== Просмотр активных заказов ==
+Buyer -> Frontend : Переход в личный кабинет
+Activate Frontend
+Frontend -> OrderService : GET /api/v1/orders?status=active
+Activate OrderService
+OrderService --> Frontend : Список активных заказов
+Deactivate OrderService
+Frontend --> Buyer : Отображение списка заказов
+Deactivate Frontend
+
+== Отмена заказа ==
+Buyer -> Frontend : Нажатие кнопки "Отменить заказ"
+Activate Frontend
+Frontend -> OrderService : POST /api/v1/orders/{id}/cancel
+Activate OrderService
+
+OrderService -> WMS : GET /api/v1/wms/orders/{id}/status
+Activate WMS
+WMS --> OrderService : Текущий статус заказа
+Deactivate WMS
+
+alt #LightGreen Сценарий 1: Заказ еще не собран (Успешная отмена)
+    OrderService -> WMS : POST /api/v1/wms/orders/{id}/hold-and-cancel
+    Activate WMS
+    WMS --> OrderService : Подтверждение отмены на складе ("не собран")
+    Deactivate WMS
+    
+    OrderService -> PaymentService : POST /api/v1/payments/{id}/refund
+    Activate PaymentService
+    PaymentService --> OrderService : Инициирован возврат средств (Успешно)
+    Deactivate PaymentService
+    
+    OrderService -> OrderService : Обновление статуса заказа на "Отменен"
+    
+    OrderService --> Frontend : HTTP 200 OK (Заказ успешно отменен, запущен возврат)
+    Frontend --> Buyer : Уведомление: "Заказ отменен. Деньги вернутся на карту."
+
+else #LightPink Сценарий 2: Заказ уже передан в сборку (Отказ в отмене)
+    OrderService -> WMS : POST /api/v1/wms/orders/{id}/hold-and-cancel
+    Activate WMS
+    WMS --> OrderService : Ошибка: Заказ уже в сборке / собран
+    Deactivate WMS
+    
+    OrderService --> Frontend : HTTP 409 Conflict (Отмена невозможна)
+    Deactivate OrderService
+    
+    Frontend --> Buyer : Ошибка: "Заказ уже собирается. Перенаправление в службу поддержки..."
+    Frontend -> Frontend : Перенаправление в чат поддержки / тикет-систему
+    Deactivate Frontend
+end
+@enduml
